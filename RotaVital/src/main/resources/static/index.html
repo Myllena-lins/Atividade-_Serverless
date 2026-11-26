@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Rota Vital</title>
+    <!-- Adicionando Chart.js para o gráfico -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+
+        :root {
+            --bg-color: #0b1120;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --card-bg: rgba(30, 41, 59, 0.6);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #8b5cf6;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top left, #1e1b4b, var(--bg-color) 70%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            margin-top: 40px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 1s ease;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #60a5fa, #d8b4fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 10px 30px rgba(139, 92, 246, 0.2);
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            font-weight: 300;
+        }
+
+        .btn-run {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border: none;
+            color: white;
+            padding: 16px 45px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 25px rgba(139, 92, 246, 0.3);
+            margin-top: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-run::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: all 0.5s;
+        }
+
+        .btn-run:hover::after {
+            left: 100%;
+        }
+
+        .btn-run:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 35px rgba(139, 92, 246, 0.5);
+        }
+
+        .btn-run:active {
+            transform: translateY(1px);
+        }
+
+        .btn-run:disabled {
+            background: #334155;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            color: #94a3b8;
+        }
+
+        .results-section {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            display: none;
+        }
+
+        .results-section.visible {
+            opacity: 1;
+            transform: translateY(0);
+            display: block;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 30px 20px;
+            text-align: center;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            background: rgba(30, 41, 59, 0.85);
+            border-color: rgba(96, 165, 250, 0.4);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .card.seq-card::before {
+            background: linear-gradient(90deg, #fb923c, #f97316);
+        }
+
+        .card.par-card::before {
+            background: linear-gradient(90deg, #38bdf8, #3b82f6);
+        }
+
+        .card h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.15rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .card .time {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #f8fafc;
+        }
+
+        .card.seq-card .time {
+            color: #fb923c;
+        }
+        
+        .card.par-card .time {
+            color: #38bdf8;
+        }
+
+        .card .speedup {
+            font-size: 1.1rem;
+            color: #34d399;
+            font-weight: 600;
+            background: rgba(52, 211, 153, 0.1);
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .seq-card {
+            grid-column: 1 / -1;
+        }
+
+        .chart-container {
+            margin-top: 40px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        /* Loader aprimorado */
+        .loader-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            margin: 50px 0;
+        }
+
+        .loader {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: inline-block;
+            border-top: 4px solid var(--primary);
+            border-right: 4px solid transparent;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+        
+        .loader::after {
+            content: '';  
+            box-sizing: border-box;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border-left: 4px solid var(--accent);
+            border-bottom: 4px solid transparent;
+            animation: rotation 0.5s linear infinite reverse;
+        }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Rota Vital</h1>
+            <p class="subtitle">Análise Avançada de Desempenho Multi-Thread</p>
+            <button id="runBtn" class="btn-run" onclick="runBenchmark()">
+                <span>Iniciar Processamento (100k Regs)</span>
+            </button>
+        </header>
+
+        <div id="loaderContainer" class="loader-container">
+            <div class="loader"></div>
+            <p style="margin-top: 20px; color: var(--text-muted); font-size: 1.1rem; letter-spacing: 1px;">
+                Fritando o processador... aguarde.
+            </p>
+        </div>
+
+        <div id="resultsSection" class="results-section">
+            <div class="results-grid">
+                <div class="card seq-card">
+                    <h3>Processamento Sequencial (1 Thread)</h3>
+                    <div class="time" id="t-seq">0 ms</div>
+                    <div class="speedup" style="color: #fb923c; background: rgba(251, 146, 60, 0.1);">Base (1.0x)</div>
+                </div>
+                <div class="card par-card">
+                    <h3>2 Threads</h3>
+                    <div class="time" id="t-par2">0 ms</div>
+                    <div class="speedup" id="s-par2">0.0x</div>
+                </div>
+                <div class="card par-card">
+                    <h3>4 Threads</h3>
+                    <div class="time" id="t-par4">0 ms</div>
+                    <div class="speedup" id="s-par4">0.0x</div>
+                </div>
+                <div class="card par-card">
+                    <h3>8 Threads</h3>
+                    <div class="time" id="t-par8">0 ms</div>
+                    <div class="speedup" id="s-par8">0.0x</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="performanceChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chartInstance = null;
+
+        // Função para animar a contagem dos números
+        function animateValue(obj, start, end, duration, suffix = "") {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                // Ease out quad
+                const easeProgress = progress * (2 - progress);
+                
+                const current = Math.floor(easeProgress * (end - start) + start);
+                
+                // Se for float (tem 'x')
+                if (suffix === "x") {
+                    const currentFloat = (easeProgress * (end - start) + start).toFixed(2);
+                    obj.innerHTML = currentFloat + suffix;
+                } else {
+                    obj.innerHTML = current + suffix;
+                }
+                
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    // Garantir valor final exato
+                    if (suffix === "x") {
+                        obj.innerHTML = parseFloat(end).toFixed(2) + suffix;
+                    } else {
+                        obj.innerHTML = end + suffix;
+                    }
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        function renderChart(seq, p2, p4, p8) {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.font.family = "'Outfit', sans-serif";
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Sequencial', '2 Threads', '4 Threads', '8 Threads'],
+                    datasets: [{
+                        label: 'Tempo de Processamento (ms)',
+                        data: [seq, p2, p4, p8],
+                        backgroundColor: [
+                            'rgba(251, 146, 60, 0.8)',
+                            'rgba(56, 189, 248, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(139, 92, 246, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(251, 146, 60, 1)',
+                            'rgba(56, 189, 248, 1)',
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(139, 92, 246, 1)'
+                        ],
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleFont: { size: 14, family: "'Outfit'" },
+                            bodyFont: { size: 14, family: "'Outfit'" },
+                            padding: 15,
+                            cornerRadius: 10,
+                            displayColors: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Milissegundos (ms)',
+                                font: { size: 13 }
+                            }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    },
+                    animation: {
+                        duration: 1500,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+
+        async function runBenchmark() {
+            const btn = document.getElementById('runBtn');
+            const loaderContainer = document.getElementById('loaderContainer');
+            const resultsSection = document.getElementById('resultsSection');
+
+            btn.disabled = true;
+            btn.innerHTML = "<span>Processando...</span>";
+            resultsSection.classList.remove('visible');
+            loaderContainer.style.display = "flex";
+
+            try {
+                const response = await fetch('/api/processamento/estoque');
+                const data = await response.json();
+
+                const tSeq = data['1_Tempo_Sequencial_ms'];
+                const tPar2 = data['2_Tempo_Paralelo_2_Threads_ms'];
+                const tPar4 = data['3_Tempo_Paralelo_4_Threads_ms'];
+                const tPar8 = data['4_Tempo_Paralelo_8_Threads_ms'];
+
+                const sPar2 = parseFloat(data['Speedup_2_Threads'].replace('x', ''));
+                const sPar4 = parseFloat(data['Speedup_4_Threads'].replace('x', ''));
+                const sPar8 = parseFloat(data['Speedup_8_Threads'].replace('x', ''));
+
+                // Mostrar a seção antes de animar
+                resultsSection.classList.add('visible');
+
+                // Animar números
+                animateValue(document.getElementById('t-seq'), 0, tSeq, 1500, " ms");
+                animateValue(document.getElementById('t-par2'), 0, tPar2, 1500, " ms");
+                animateValue(document.getElementById('s-par2'), 0, sPar2, 1500, "x");
+                
+                animateValue(document.getElementById('t-par4'), 0, tPar4, 1500, " ms");
+                animateValue(document.getElementById('s-par4'), 0, sPar4, 1500, "x");
+                
+                animateValue(document.getElementById('t-par8'), 0, tPar8, 1500, " ms");
+                animateValue(document.getElementById('s-par8'), 0, sPar8, 1500, "x");
+
+                // Renderizar gráfico
+                renderChart(tSeq, tPar2, tPar4, tPar8);
+
+            } catch (error) {
+                alert("Erro ao conectar com a API. Certifique-se de que o servidor Spring Boot está rodando.");
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = "<span>Executar Novamente</span>";
+                loaderContainer.style.display = "none";
+            }
+        }
+    </script>
+</body>
+
+</html>
